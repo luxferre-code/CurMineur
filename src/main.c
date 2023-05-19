@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curses.h>
+#include <time.h>
 
 #define NB_LIGNES 10
 #define NB_COLONNES 10
@@ -23,9 +24,26 @@ game* init_game();
 void genere_map(game* g);
 void affiche_map(game* g);
 int nb_voisin(game* g, int x, int y);
-int active_case(game* g, int x, int y);
+int active_case(game* g, int x, int y, int* count);
+int demande_case(game* g, int* x, int* y, int* flag_on);
 
 int main(void) {
+
+    game* game = init_game();
+    genere_map(game);
+    int x, y;
+    int count = 0;
+
+    while(1) {
+        printf("Vous avez %d bonnes cases\n", count);
+        affiche_map(game);
+        if(demande_case(game, &x, &y)) {
+            if(active_case(game, x, y, &count)) {
+                printf("BOOM !\n");
+                break;
+            }
+        }
+    }
 
     return 0;
 }
@@ -42,6 +60,7 @@ game* init_game() {
 }
 
 void genere_map(game* g) {
+    srand(time(NULL));
     for(int x = 0; x < g->nb_lignes; x++) {
         for(int y = 0; y < g->nb_colonnes; y++) {
             
@@ -83,18 +102,21 @@ int nb_voisin(game* g, int x, int y) {
     return nb;
 }
 
-int active_case(game* g, int x, int y) {
+int active_case(game* g, int x, int y, int* count) {
     // Return 1 if the case is a mine, 0 otherwise
     if(g->map[x * g->nb_colonnes + y] == 'X') {
         return 1;
     } else {
         g->visibility[x * g->nb_colonnes + y] = 1;
-        if(nb_voisin(g, x, y) == 0) {
+        int nb = nb_voisin(g, x, y);
+        g->map[x * g->nb_colonnes + y] = nb + '0';
+        *count += 1;
+        if(nb == 0) {
             for(int i = x - 1; i <= x + 1; i++) {
                 for(int j = y - 1; j <= y + 1; j++) {
                     if(i >= 0 && i < g->nb_lignes && j >= 0 && j < g->nb_colonnes) {
                         if(g->visibility[i * g->nb_colonnes + j] == 0) {
-                            active_case(g, i, j);
+                            active_case(g, i, j, count);
                         }
                     }
                 }
@@ -102,4 +124,20 @@ int active_case(game* g, int x, int y) {
         }
         return 0;
     }
+}
+
+int demande_case(game* g, int* x, int* y, int* flag_on) {
+    printf("Entrez les coordonnées de la case à activer : ");
+    char* chaine = malloc(sizeof(char) * 10);
+    scanf("%c", chaine);
+
+    if(chaine[0] == 'q') {
+        return 0; // Cas ou la demande est invalide
+    }
+
+    *x = atoi(chaine);
+    *y = atoi(chaine + 1);
+    *flag_on = atoi(chaine + 2);
+
+    return 1; // Cas ou la demande est valide
 }
